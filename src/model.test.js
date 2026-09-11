@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {predictNext,validateEntries,summarize,transitions} from './model.js';
+const entry=(id,action,previousId=null,minute=0)=>({id,action,previousId,at:new Date(Date.UTC(2026,8,11,12,minute)).toISOString(),impacts:[{goal:'concurso',value:'positive'},{goal:'dinheiro',value:'negative'}],minutes:0,note:'',relation:'yes'});
+test('prediction uses counts and needs five observed transitions',()=>{const es=[];for(let i=0;i<5;i++){es.push(entry('a'+i,'Enrolei',null,i*2));es.push(entry('b'+i,i<3?'Estudei':'Comi','a'+i,i*2+1));}assert.equal(predictNext(es.slice(0,8),'Enrolei').ready,false);const p=predictNext(es,'Enrolei');assert.equal(p.ready,true);assert.deepEqual(p.items[0],{action:'Estudei',count:3,percent:60});});
+test('prediction ignores long gaps and missing previous records',()=>{assert.equal(predictNext([entry('a','Enrolei'),entry('b','Comi','a',121),entry('c','Comi','missing')],'Enrolei').total,0);});
+test('goal impacts remain independent and explicit links form patterns',()=>{const es=[entry('a','Enrolei'),entry('b','Estudei','a',10)];assert.equal(summarize(es,'concurso').positive,2);assert.equal(summarize(es,'dinheiro').negative,2);assert.deepEqual(transitions(es),[['Enrolei → Estudei',1]]);});
+test('backup rejects invalid or duplicate data',()=>{assert.throws(()=>validateEntries([entry('a','Comi'),entry('a','Comi')]));assert.throws(()=>validateEntries([{...entry('a','Comi'),minutes:-1}]));assert.throws(()=>validateEntries([{...entry('a','Comi'),impacts:[{goal:'fake',value:'positive'}]}]));assert.equal(validateEntries([entry('a','Comi')]).length,1);});
