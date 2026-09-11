@@ -22,3 +22,17 @@ export function predictNext(entries, action, minimum=5) {
  for(const entry of entries){const previous=byId.get(entry.previousId);if(!previous||previous.action!==action)continue;const gap=Date.parse(entry.at)-Date.parse(previous.at);if(gap<0||gap>2*60*60*1000)continue;counts.set(entry.action,(counts.get(entry.action)||0)+1);total++;}
  return {total,ready:total>=minimum,items:[...counts].sort((a,b)=>b[1]-a[1]).map(([action,count])=>({action,count,percent:Math.round(count/total*100)}))};
 }
+
+export function rankedActions(entries) {
+ const other = actions.find(([, name]) => name === 'Outra ação');
+ const options = new Map(actions.filter(option => option !== other).map(([icon, name]) => [name, icon]));
+ const counts = new Map();
+ for (const {action} of entries) {
+  if (action === other[1]) continue;
+  if (!options.has(action)) options.set(action, '◌');
+  counts.set(action, (counts.get(action) || 0) + 1);
+ }
+ // Stable ties preserve the initial order; custom actions follow first appearance.
+ return [...options].sort(([a], [b]) => (counts.get(b) || 0) - (counts.get(a) || 0))
+  .map(([name, icon]) => [icon, name]).concat([other]);
+}

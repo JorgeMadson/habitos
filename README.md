@@ -15,6 +15,8 @@ Abra o endereço exibido pelo Vite. Para gerar a versão estática: `npm run bui
 
 Escolha uma ação (ou escreva outra), selecione um ou mais objetivos e indique o impacto individual. Salve; duração, nota e relação percebida com o registro anterior podem ser adicionadas depois. O histórico permite excluir registros. Exportação e restauração JSON disponíveis na navegação.
 
+As ações aparecem em ordem de frequência no histórico completo, incluindo as ações personalizadas. Empates preservam a ordem inicial; ações personalizadas empatadas seguem a primeira aparição no histórico. “Outra ação” permanece no final. A ordem é recalculada após registros, exclusões e restauração de backup, sem depender de conexão.
+
 Os 11 objetivos iniciais refletem o escopo pessoal solicitado. Ações não recebem julgamento global. Não há sequências obrigatórias nem metas de uso.
 
 ## Próximo registro provável
