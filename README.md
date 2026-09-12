@@ -2,6 +2,8 @@
 
 Diário pessoal de ações, contexto e impacto percebido em objetivos. Interface para celular, com login por e-mail/senha, sincronização Firebase e uso offline após o primeiro acesso.
 
+Para uma orientação rápida de manutenção, leia [AGENTS.md](AGENTS.md) e [docs/architecture.md](docs/architecture.md). A documentação de configuração e retomada do Firebase está em [docs/firebase.md](docs/firebase.md).
+
 ## Executar
 
 ```sh
