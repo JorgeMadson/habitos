@@ -1,3 +1,10 @@
 node_modules/
 dist/
 *.log
+.env
+.env.local
+.env.*.local
+test-results/
+playwright-report/
+.firebase/
+dist-test/

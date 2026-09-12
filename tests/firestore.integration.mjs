@@ -1,0 +1,26 @@
+import {readFile} from 'node:fs/promises';
+import test from 'node:test';
+import {initializeTestEnvironment, assertFails, assertSucceeds} from '@firebase/rules-unit-testing';
+import {doc, setDoc, getDoc, updateDoc, deleteDoc} from 'firebase/firestore';
+import {goals} from '../src/model.js';
+const env=await initializeTestEnvironment({projectId:'demo-entre',firestore:{host:'127.0.0.1',port:8080,rules:await readFile('firestore.rules','utf8')}});
+await env.clearFirestore();
+const record={id:'rules-record',at:new Date().toISOString(),action:'Estudei',impacts:[{goal:'concurso',value:'positive'}],minutes:0,note:'',relation:'unsure',previousId:null,deleted:false};
+const own=doc(env.authenticatedContext('rules-owner').firestore(),'users/rules-owner/entries/rules-record');
+test('rules isolate accounts, validate data, preserve deleted records and immutable action identity',async()=>{
+ await assertSucceeds(setDoc(own,record));
+ await assertSucceeds(getDoc(own));
+ await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(),own.path)));
+ await assertFails(getDoc(doc(env.authenticatedContext('stranger').firestore(),own.path)));
+ await assertFails(setDoc(doc(env.authenticatedContext('stranger').firestore(),own.path),record));
+ await assertFails(updateDoc(own,{minutes:-1}));
+ await assertFails(updateDoc(own,{action:'Outra coisa'}));
+ await assertFails(setDoc(doc(env.authenticatedContext('rules-owner').firestore(),'users/rules-owner/entries/invalid'),{...record,id:'invalid',impacts:[{goal:'concurso',value:'positive'},{goal:'concurso',value:'negative'}]}));
+ await assertSucceeds(setDoc(doc(env.authenticatedContext('rules-owner').firestore(),'users/rules-owner/entries/all-goals'),{...record,id:'all-goals',impacts:goals.map(([goal])=>({goal,value:'neutral'}))}));
+ await assertSucceeds(updateDoc(own,{note:'Revisão',minutes:30}));
+ await assertSucceeds(updateDoc(own,{deleted:true}));
+ await assertSucceeds(updateDoc(own,{note:'Contexto offline atrasado'}));
+ await assertFails(updateDoc(own,{deleted:false}));
+ await assertFails(deleteDoc(own));
+});
+test.after(()=>env.cleanup());
