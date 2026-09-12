@@ -9,6 +9,7 @@ Permitir que o entre• seja usado principalmente no celular, funcione offline d
 ## Estado atual
 
 - O app tem registro de ações, objetivos, impactos, contexto, histórico, padrões e previsão da próxima ação.
+- Uma ação pode ser registrada sem objetivo relacionado; objetivos e impacto são conexões opcionais, não pré-requisito para observar o que aconteceu.
 - As ações mais frequentes aparecem primeiro.
 - A persistência local antiga usa `localStorage` na chave `entre.entries.v1`.
 - A integração Firebase já está implementada no código:

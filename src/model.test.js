@@ -32,3 +32,7 @@ test('CSV exports each goal, quotes user text and neutralizes spreadsheet formul
 test('backup rejects IDs that cannot safely become Firestore paths', () => {
  assert.throws(()=>validateEntries([entry('a/b','Comi')]));
 });
+test('actions can be recorded without an affected goal', () => {
+ const noGoal = {...entry('no-goal','Fap / porn'), impacts: []};
+ assert.equal(validateEntries([noGoal]).length, 1);
+});

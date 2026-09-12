@@ -5,7 +5,7 @@ export function validateEntries(data) {
  if (!Array.isArray(data) || data.length > 100000) throw new Error('Backup inválido.');
  const ids = new Set();
  for (const e of data) {
-  if (!e || typeof e.id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(e.id) || ids.has(e.id) || typeof e.action !== 'string' || !e.action.trim() || e.action.length > 100 || !Number.isFinite(Date.parse(e.at)) || !Array.isArray(e.impacts) || e.impacts.length === 0 || e.impacts.some(i=>!goals.some(g=>g[0]===i.goal) || !impactLabels[i.value]) || new Set(e.impacts.map(i=>i.goal)).size !== e.impacts.length || typeof e.note !== 'string' || e.note.length > 2000 || !Number.isFinite(e.minutes) || e.minutes < 0 || e.minutes > 1440 || !['yes','no','unsure'].includes(e.relation) || !(e.previousId === null || typeof e.previousId === 'string')) throw new Error('Backup inválido. Os dados atuais foram preservados.');
+  if (!e || typeof e.id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(e.id) || ids.has(e.id) || typeof e.action !== 'string' || !e.action.trim() || e.action.length > 100 || !Number.isFinite(Date.parse(e.at)) || !Array.isArray(e.impacts) || e.impacts.length > 11 || e.impacts.some(i=>!goals.some(g=>g[0]===i.goal) || !impactLabels[i.value]) || new Set(e.impacts.map(i=>i.goal)).size !== e.impacts.length || typeof e.note !== 'string' || e.note.length > 2000 || !Number.isFinite(e.minutes) || e.minutes < 0 || e.minutes > 1440 || !['yes','no','unsure'].includes(e.relation) || !(e.previousId === null || typeof e.previousId === 'string')) throw new Error('Backup inválido. Os dados atuais foram preservados.');
   ids.add(e.id);
  }
  return data;
@@ -45,6 +45,9 @@ export function entriesToCsv(entries) {
   return '"' + text.replaceAll('"', '""') + '"';
  };
  const rows = [['id','data_hora','acao','objetivo','impacto','duracao_minutos','nota','acao_anterior_id','relacao']];
- for (const entry of entries) for (const impact of entry.impacts) rows.push([entry.id,entry.at,entry.action,goals.find(g=>g[0]===impact.goal)[1],impactLabels[impact.value],entry.minutes,entry.note,entry.previousId,entry.relation]);
+ for (const entry of entries) {
+  const impacts = entry.impacts.length ? entry.impacts : [null];
+  for (const impact of impacts) rows.push([entry.id,entry.at,entry.action,impact ? goals.find(g=>g[0]===impact.goal)[1] : '',impact ? impactLabels[impact.value] : '',entry.minutes,entry.note,entry.previousId,entry.relation]);
+ }
  return '\uFEFF' + rows.map(row=>row.map(cell).join(';')).join('\r\n');
 }

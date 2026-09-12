@@ -24,7 +24,7 @@ export function accountView() {
     <div id="recovery"><p>Registros que o servidor recusou: <span id="failed-count">${state.failed.length}</span>. A exportação inclui as ações recuperáveis.</p><button id="retry-failed" class="text-button">Tentar enviar novamente</button></div>
   `:`<p>Entre com a mesma conta nos seus dispositivos. O primeiro acesso precisa de internet.</p>
     <form id="auth-form"><label>E-mail<input name="email" type="email" autocomplete="username" required></label>
-    <label>Senha<input name="password" type="password" autocomplete="current-password" minlength="6" required></label>
+    <label>Senha<div class="password-field"><input name="password" type="password" autocomplete="current-password" minlength="6" required><button id="toggle-password" type="button" aria-label="Mostrar senha" aria-pressed="false">Mostrar</button></div></label>
     <div class="account-actions"><button name="intent" value="login" class="primary">Entrar</button><button name="intent" value="register" class="choice">Criar conta</button></div>
     <button id="reset-password" type="button" class="text-button">Esqueci minha senha</button></form>`}
     ${legacy?`<div class="legacy"><h2>Registros anteriores neste aparelho</h2><p>Eles continuam preservados. ${state.user?'Importe para esta conta sem substituir o histórico já sincronizado.':'Entre para importá-los para sua conta.'}</p>
@@ -40,6 +40,7 @@ export function bindAccount() {
   }
   const form=$('#auth-form');
   if(form){form.onsubmit=e=>{e.preventDefault();const f=new FormData(form);const button=e.submitter;run(button,()=> (button.value==='register'?register:login)(String(f.get('email')).trim(),String(f.get('password'))));};
+    $('#toggle-password').onclick=e=>{const input=form.elements.password;const visible=input.type==='text';input.type=visible?'password':'text';e.currentTarget.textContent=visible?'Mostrar':'Ocultar';e.currentTarget.setAttribute('aria-label',visible?'Mostrar senha':'Ocultar senha');e.currentTarget.setAttribute('aria-pressed',String(!visible));};
     $('#reset-password').onclick=e=>{const email=form.elements.email;if(!email.reportValidity())return;run(e.currentTarget,()=>resetPassword(email.value.trim()),'Se houver uma conta com esse e-mail, você receberá as instruções de recuperação.');};}
   if($('#account-csv'))$('#account-csv').onclick=()=>download(entriesToCsv(exportEntries()),'entre-registros.csv','text/csv;charset=utf-8');
   if($('#sign-out'))$('#sign-out').onclick=e=>run(e.currentTarget,logout);

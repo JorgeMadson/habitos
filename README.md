@@ -25,7 +25,7 @@ Os registros locais não são transferidos automaticamente para o endereço publ
 
 ## Fluxo
 
-Escolha uma ação (ou escreva outra), selecione um ou mais objetivos e indique o impacto individual. Salve; duração, nota e relação percebida com o registro anterior podem ser adicionadas depois. O histórico permite excluir registros em todos os dispositivos. Exportação JSON/CSV e importação sem duplicação estão disponíveis.
+Escolha uma ação (ou escreva outra), selecione zero ou mais objetivos e indique o impacto individual quando houver objetivos. Uma ação sem objetivo também é um registro válido. Salve; duração, nota e relação percebida com o registro anterior podem ser adicionadas depois. O histórico permite excluir registros em todos os dispositivos. Exportação JSON/CSV e importação sem duplicação estão disponíveis.
 
 As ações aparecem em ordem de frequência no histórico completo, incluindo as ações personalizadas. Empates preservam a ordem inicial; ações personalizadas empatadas seguem a primeira aparição no histórico. “Outra ação” permanece no final. A ordem é recalculada após registros, exclusões e restauração de backup, sem depender de conexão.
 

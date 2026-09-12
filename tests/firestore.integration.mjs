@@ -16,7 +16,8 @@ test('rules isolate accounts, validate data, preserve deleted records and immuta
  await assertFails(updateDoc(own,{minutes:-1}));
  await assertFails(updateDoc(own,{action:'Outra coisa'}));
  await assertFails(setDoc(doc(env.authenticatedContext('rules-owner').firestore(),'users/rules-owner/entries/invalid'),{...record,id:'invalid',impacts:[{goal:'concurso',value:'positive'},{goal:'concurso',value:'negative'}]}));
- await assertSucceeds(setDoc(doc(env.authenticatedContext('rules-owner').firestore(),'users/rules-owner/entries/all-goals'),{...record,id:'all-goals',impacts:goals.map(([goal])=>({goal,value:'neutral'}))}));
+  await assertSucceeds(setDoc(doc(env.authenticatedContext('rules-owner').firestore(),'users/rules-owner/entries/all-goals'),{...record,id:'all-goals',impacts:goals.map(([goal])=>({goal,value:'neutral'}))}));
+  await assertSucceeds(setDoc(doc(env.authenticatedContext('rules-owner').firestore(),'users/rules-owner/entries/no-goal'),{...record,id:'no-goal',action:'Fap / porn',impacts:[]}));
  await assertSucceeds(updateDoc(own,{note:'Revisão',minutes:30}));
  await assertSucceeds(updateDoc(own,{deleted:true}));
  await assertSucceeds(updateDoc(own,{note:'Contexto offline atrasado'}));

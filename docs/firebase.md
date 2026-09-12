@@ -36,7 +36,7 @@ A chave antiga `entre.entries.v1` continua preservada. Em **Conta → Importar r
 
 Importação JSON adiciona IDs ausentes por transações e preserva documentos existentes, inclusive exclusões. Não substitui o histórico da conta. Uma interrupção pode importar apenas parte do arquivo; repetir é seguro. Há botão para exportar o backup local anterior antes de importar.
 
-Exportação JSON preserva a estrutura para nova importação. CSV usa UTF-8, separador `;`, uma linha por objetivo afetado e protege textos iniciados por caracteres de fórmula. Durações repetidas em linhas de objetivos não devem ser somadas como ações distintas.
+Exportação JSON preserva a estrutura para nova importação. CSV usa UTF-8, separador `;`, uma linha por objetivo afetado e uma linha com objetivo/impacto vazios para ações sem objetivos. Textos iniciados por caracteres de fórmula são protegidos. Durações repetidas em linhas de objetivos não devem ser somadas como ações distintas.
 
 Se o servidor recusar uma escrita, a interface informa o erro e guarda uma cópia de recuperação por conta em localStorage. Ações recusadas entram na exportação; **Conta → Tentar enviar novamente** permite tentar após corrigir o acesso. A fila offline normal continua sob responsabilidade do SDK, não de código próprio.
 
