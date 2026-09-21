@@ -11,12 +11,12 @@ Permitir que o entre• seja usado principalmente no celular, funcione offline d
 - O app tem registro de ações, objetivos, impactos, contexto, histórico, padrões e previsão da próxima ação.
 - Uma ação pode ser registrada sem objetivo relacionado; objetivos e impacto são conexões opcionais, não pré-requisito para observar o que aconteceu.
 - As ações mais frequentes aparecem primeiro.
-- A persistência local antiga usa `localStorage` na chave `entre.entries.v1`.
+- O radar usa somente entradas com `schemaVersion: 2`; dados anteriores devem ser exportados e migrados separadamente.
 - A integração Firebase já está implementada no código:
   - Authentication por e-mail e senha;
   - Firestore com um documento por registro em `users/{uid}/entries/{entryId}`;
   - cache persistente IndexedDB e fila offline do Firestore;
-  - importação idempotente dos registros antigos;
+  - importação idempotente de backups V2;
   - exportação JSON e CSV;
   - exclusão por tombstone (`deleted: true`);
   - recuperação local de escritas recusadas;
@@ -51,8 +51,8 @@ Não envie senha, chave privada ou conta de serviço. O `firebaseConfig` Web é 
 - Ações distintas criadas em dois dispositivos aparecem ambas no histórico.
 - Uma conta não lê nem grava documentos de outra conta.
 - Uma edição de contexto em andamento não é destruída por uma atualização remota.
-- Excluir uma ação oculta-a em todos os dispositivos e uma importação antiga não a ressuscita.
-- Registros locais antigos só são enviados após ação explícita em **Conta → Importar registros anteriores**.
+- Excluir uma ação oculta-a em todos os dispositivos e uma importação não a ressuscita.
+- Registros V1 ficam fora da consulta ativa até uma migração explícita para V2.
 - JSON e CSV podem ser exportados sem enviar dados a terceiros.
 - O app abre offline após a preparação inicial e deixa claro quando há envio pendente.
 

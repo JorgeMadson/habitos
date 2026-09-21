@@ -1,6 +1,6 @@
 # entre
 
-Diário pessoal de ações, contexto e impacto percebido em objetivos. Interface para celular, com login por e-mail/senha, sincronização Firebase e uso offline após o primeiro acesso.
+Radar comportamental pessoal para observar estado, detectar sequências, prever risco e testar intervenções. Interface mobile-first, com sincronização Firebase e uso offline após o primeiro acesso.
 
 Para uma orientação rápida de manutenção, leia [AGENTS.md](AGENTS.md) e [docs/architecture.md](docs/architecture.md). A documentação de configuração e retomada do Firebase está em [docs/firebase.md](docs/firebase.md).
 
@@ -27,26 +27,26 @@ Os registros locais não são transferidos automaticamente para o endereço publ
 
 ## Fluxo
 
-Escolha uma ação (ou escreva outra), selecione zero ou mais objetivos e indique o impacto individual quando houver objetivos. Uma ação sem objetivo também é um registro válido. Salve; duração, nota e relação percebida com o registro anterior podem ser adicionadas depois. O histórico permite excluir registros em todos os dispositivos. Exportação JSON/CSV e importação sem duplicação estão disponíveis.
+Registre o estado atual ou pule essa etapa, escolha uma ação, relacione objetivos opcionalmente e salve. Quando surgem sinais de ciclo, o fluxo pede o primeiro sinal e oferece uma intervenção curta; níveis avançados permitem registrar o custo posterior e o tempo de recuperação.
 
 As ações aparecem em ordem de frequência no histórico completo, incluindo as ações personalizadas. Empates preservam a ordem inicial; ações personalizadas empatadas seguem a primeira aparição no histórico. “Outra ação” permanece no final. A ordem é recalculada após registros, exclusões e restauração de backup, sem depender de conexão.
 
 Os 11 objetivos iniciais refletem o escopo pessoal solicitado. Ações não recebem julgamento global. Não há sequências obrigatórias nem metas de uso.
 
-## Próximo registro provável
+## Previsões e insights
 
-Frequência empírica de primeira ordem: para a última ação, conta quais registros a sucederam por `previousId`, com intervalo de até duas horas. Só exibe percentuais a partir de cinco transições elegíveis. A contagem de cada resultado e o denominador ficam visíveis. Cinco exemplos são um limite de apresentação, não garantia estatística. O modelo prevê registros observados, não comportamento completo; não estabelece causalidade. Relações explicitamente marcadas pelo usuário aparecem separadamente em Padrões.
+O próximo registro provável usa transições ligadas por `previousId`. O risco procura combinações de contexto no histórico e observa entradas em ciclo nos 30 minutos seguintes. Percentuais aparecem somente a partir de cinco situações comparáveis, sempre com amostra. São associações dos dados do usuário, não diagnóstico ou causalidade.
 
 ## Firebase e uso offline
 
 A configuração Web do projeto `entre-habitos` está incluída. Antes do uso, habilite E-mail/senha no Authentication e publique as regras de `firestore.rules` no Firestore. O Pages publica o site, mas não as regras do banco.
 
-Veja [configuração, importação dos registros antigos e testes](docs/firebase.md).
+Veja [configuração, contrato V2 e testes](docs/firebase.md).
 
 Após o primeiro login e preparação online, os registros ficam no cache persistente do aparelho. O app pode abrir offline e sincroniza as alterações quando a conexão volta. Cada conta acessa seus próprios documentos. O estado na tela diferencia dados locais, envio pendente e confirmação do servidor.
 
-Os registros locais anteriores são preservados e podem ser importados explicitamente em Conta. Exportações JSON e CSV continuam disponíveis. Limpar os dados do navegador pode apagar registros ainda não sincronizados; exporte backups. Sair da conta oculta os registros, mas não limpa o cache do aparelho.
+Somente entradas com `schemaVersion: 2` entram no radar. Exporte dados V1 antes de atualizar; eles exigirão migração para o novo formato. Limpar os dados do navegador pode apagar registros ainda não sincronizados.
 
 ## Limites
 
-Não há ainda detalhamento por subtipo, valores financeiros, horários retroativos, hierarquias de objetivos ou previsões por contexto. Contagens de impacto não medem resultados reais de objetivos. Tempo entre registros não equivale à duração das atividades. Alterações simultâneas nos mesmos campos seguem a última escrita aceita pelo Firestore.
+Não há diagnóstico, causalidade, valores financeiros, horários retroativos ou hierarquias de objetivos. Com menos de cinco situações comparáveis, o risco permanece em coleta. Tempo entre registros não equivale à duração das atividades.

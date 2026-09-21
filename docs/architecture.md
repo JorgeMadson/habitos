@@ -1,87 +1,77 @@
 # Arquitetura do entre•
 
-Este é um app web mobile-first, local-first e sem backend próprio. O frontend é um bundle Vite servido pelo GitHub Pages. Firebase Authentication identifica o usuário; Cloud Firestore sincroniza registros. O service worker só guarda o app shell. O Firestore IndexedDB é o cache e a fila de registros.
+App web mobile-first, local-first e sem backend próprio. Vite gera o frontend; Firebase Authentication identifica o usuário; Cloud Firestore sincroniza registros; Workbox guarda o app shell.
 
-## Primitivas do domínio
+## Primitiva do domínio
 
-`Entry` é o único fato armazenado:
+`Entry` é o único fato armazenado. O contrato ativo é V2:
 
 ```ts
 type Entry = {
-  id: string                 // também é o ID do documento Firestore
-  at: string                 // ISO UTC gerado pelo aparelho
-  action: string             // ação observada, até 100 caracteres
+  schemaVersion: 2
+  id: string
+  at: string
+  action: string
   impacts: { goal: GoalId, value: 'positive'|'negative'|'neutral' }[]
-  minutes: number            // 0 quando não informado
-  note: string               // opcional, até 2000 caracteres
+  minutes: number
+  note: string
   relation: 'yes'|'no'|'unsure'
-  previousId: string | null  // ação anterior conhecida no aparelho/conta
+  previousId: string | null
+  category: 'routine'|'work'|'study'|'care'|'leisure'|'avoidance'|'sexual'|'browsing'|'social'|'other'
+  energy: 'very_low'|'low'|'normal'|'high'|null
+  emotion: string|null
+  context: string|null
+  alone: boolean|null
+  nextActionDefined: boolean|null
+  avoidedTask: string|null
+  cycleLevel: 0|1|2|3|4|null
+  trigger: string|null
+  intervention: string|null
+  interventionResult: 'decreased'|'same'|'increased'|'continued'|null
+  apathyScore: number|null
+  fatigueScore: number|null
+  sadnessScore: number|null
+  anxietyScore: number|null
+  guiltScore: number|null
+  focusDifficultyScore: number|null
+  recoveryMinutes: number|null
+  aftermathRecorded: boolean
 }
 ```
 
-`impacts` pode ser vazio. Isso é essencial: a ação é observável mesmo sem relação com um objetivo. Um objetivo pode aparecer no máximo uma vez por entrada. O documento Firestore acrescenta `deleted: boolean`; exclusões são tombstones, não deletes físicos.
+`impacts` pode ser vazio e campos de estado podem ser `null`: o registro rápido continua válido. O documento Firestore acrescenta `deleted: boolean`; exclusões são tombstones.
 
-Os objetivos e ações iniciais vivem em `src/model.js`. Ações personalizadas são strings, recebem ícone genérico e entram no ranking por frequência. `rankedActions()` preserva a ordem inicial em empates e deixa `Outra ação` no fim.
-
-## Camadas e contratos
+## Camadas
 
 ### `src/model.js`
 
-Funções puras, sem DOM, Firebase ou relógio implícito: `validateEntries`, `summarize`, `transitions`, `predictNext`, `rankedActions` e `entriesToCsv`. Esta é a camada para mudar regras de negócio e testar dados sem navegador.
-
-`predictNext` conta o próximo registro ligado por `previousId`, com intervalo máximo de duas horas. Só apresenta previsão a partir de cinco transições. É frequência observada, não causalidade.
+Funções puras para validação, sugestão de nível, risco, sequências, insights, transições, ranking e exportação. `predictNext` usa transições ligadas por `previousId` em até duas horas. `assessCycleRisk` compara combinações de até três sinais e procura entrada em ciclo nos 30 minutos seguintes. Percentuais exigem cinco amostras comparáveis. Frequência indica associação, não causalidade.
 
 ### `src/store.js`
 
-Inicializa Auth e Firestore por `firebase.js`, abre o snapshot de `users/{uid}/entries`, filtra tombstones e expõe o estado por `subscribe()`. `saveEntry()` escreve um documento por ação e resolve quando a alteração aparece localmente; a fila de rede é responsabilidade do SDK. `importEntries()` usa transação online para não duplicar IDs. `exportEntries()` inclui cópias de recuperação de falhas.
-
-Transição de usuário encerra o snapshot anterior, limpa o estado em memória e começa outro listener. Nunca reaproveite `entries` de uma conta ao entrar em outra.
-
-### `src/account.js`
-
-Renderiza e liga os eventos da conta. Cadastro/login/reset exigem conexão; sessão já existente pode usar cache offline. Importação é explícita. O botão CSV exporta cada objetivo em uma linha e cria uma linha vazia para ações sem objetivo.
+Consulta `schemaVersion == 2` em `users/{uid}/entries`, filtra tombstones e expõe snapshots. `saveEntry()` resolve quando a alteração aparece localmente; o SDK mantém a fila offline. Importação aceita somente V2 e usa transações para preservar IDs e tombstones.
 
 ### `src/app.js`
 
-Mantém apenas o estado de interface: `page`, `step`, `draft`, `period`, `notice` e `savedId`. O wizard é: escolher ação → escolher zero ou mais objetivos → impactos quando houver → salvar → contexto opcional. O registro mínimo deve continuar funcionando sem duração, nota, relação ou conexão a meta.
+Mantém estado de interface. O fluxo principal é estado opcional → ação → objetivos opcionais → impactos → salvar. Níveis 1 a 3 abrem intervenção; níveis 2 a 4 pedem primeiro sinal; níveis 3 e 4 abrem o pós-ciclo. Ações rápidas podem pular o estado. Snapshots remotos não reconstroem um formulário aberto.
 
-### `src/pwa.js` e `vite.config.js`
+### Outras superfícies
 
-Geram manifest e service worker em build. A atualização pede confirmação antes de recarregar. O app só fica offline após uma abertura online que conclua o cache; `npm run dev` não prova esse comportamento.
+`src/account.js` cuida de conta, backup e recuperação. `src/pwa.js` e `vite.config.js` cuidam do shell offline. `firestore.rules` exige entrada V2 completa e permite atualizar somente estado/ciclo ou tombstone; identidade, ação, horário e impactos ficam imutáveis.
 
-### `firestore.rules`
+## Corte V2
 
-Cada leitura exige `request.auth.uid == uid`. Criação exige documento completo válido. Updates só alteram contexto/tombstone; ação, timestamp e impactos não mudam. Tombstones não podem voltar a `false`. Publique este arquivo no banco `(default)` antes do teste real.
+Documentos sem `schemaVersion: 2` não entram na consulta ativa nem nas análises. Exporte dados V1 antes da atualização. Uma migração futura deve produzir entradas V2 completas antes da importação.
 
-## Fluxos importantes
+## Regras de análise
 
-### Registro online/offline
+- Sugestão de nível usa apenas respostas atuais e pode ser substituída manualmente.
+- Risco e próxima ação usam somente o histórico da própria conta.
+- Percentuais mostram denominador e exigem amostra mínima de cinco.
+- Combinações têm prioridade sobre sinais isolados quando há amostra suficiente.
+- Intervenção bem-sucedida significa `interventionResult == 'decreased'`.
+- Tempo de recuperação mede custo percebido, não duração clínica.
 
-1. `app` cria um `Entry` com `previousId` do último registro local.
-2. `store.saveEntry()` envia `setDoc()` e o Firestore coloca o documento no cache.
-3. O snapshot atualiza a interface imediatamente e indica envio pendente quando necessário.
-4. Ao reconectar, o SDK envia a fila e o snapshot confirma o servidor.
+## Validação
 
-### Importação legada
-
-`entre.entries.v1` nunca é apagado automaticamente. Em Conta, o usuário confirma a importação online. Cada ID é testado por transação; repetir o arquivo não cria duplicatas.
-
-### Falha de autorização/rede
-
-Falhas de escrita ficam em `entre.failed.{uid}` e aparecem na exportação. A tela Conta oferece nova tentativa. Não confunda isso com a fila offline normal do SDK.
-
-## Superfícies de publicação
-
-O Pages usa `.github/workflows/pages.yml` e deve publicar o diretório `dist` com base `/habitos/`. O Firebase Hosting ainda não é necessário para a sincronização. Se for adotado, configure uma segunda superfície conscientemente; não misture o pipeline de Hosting com o Pages sem decidir qual URL será canônica.
-
-## Como trabalhar em uma tarefa
-
-1. Localize a primitiva e seus consumidores com `rg`.
-2. Escreva ou ajuste o teste do contrato.
-3. Faça a menor mudança end-to-end.
-4. Rode `npm test`, `npm run build` e, quando tocar Firebase/PWA, `npm run test:integration` e um teste manual no celular.
-5. Atualize a documentação que explica a decisão, não uma cópia de comandos que já estão no `package.json`.
-
-## Limites conhecidos
-
-Não há subtipo de ação, valor financeiro, horário retroativo, hierarquia de objetivos, previsão por contexto ou sincronização de dados sem login inicial. O relógio do aparelho define `at`. Alterações concorrentes no mesmo contexto seguem a última escrita aceita pelo Firestore. Limpar dados do navegador pode apagar escritas que ainda não chegaram ao servidor; exporte backups.
+Rode `npm test` e `npm run build` em toda alteração. Mudanças de Auth/Firestore exigem `npm run test:integration`. Não declare sincronização pronta sem teste no Firebase real.

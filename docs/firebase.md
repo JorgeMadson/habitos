@@ -25,16 +25,14 @@ A configuração Web é pública; a proteção está nas regras e na autenticaç
 - O app confirma o salvamento pelo snapshot local, sem esperar uma resposta da rede. O estado da sincronização distingue dados locais, escritas pendentes e confirmação do servidor.
 - PWA/Workbox guarda HTML, JavaScript, CSS, ícones e fontes locais. O primeiro acesso precisa de conexão e conclusão da preparação offline. O modo `npm run dev` não instala esse cache; valide usando um build com `npm run preview` ou HTTPS publicado.
 - O primeiro login, cadastro, recuperação de senha e importação de backup exigem conexão. A sessão existente permite usar os registros em cache offline.
-- Cada ação é um documento independente. Criar ações em dois dispositivos preserva ambas. Alterações concorrentes nos mesmos campos de contexto seguem a última escrita aceita pelo servidor; isso não significa necessariamente a última alteração pelo relógio do aparelho.
-- Exclusão marca `deleted: true`. O registro fica oculto em todos os dispositivos. O marcador evita que uma importação antiga ressuscite o registro. Edições de contexto não mudam esse marcador.
+- Cada ação V2 é um documento independente. Criar ações em dois dispositivos preserva ambas. Alterações concorrentes nos campos de estado/ciclo seguem a última escrita aceita pelo servidor.
+- Exclusão marca `deleted: true`. O registro fica oculto em todos os dispositivos e não pode ser ressuscitado por importação.
 - Notificações remotas não reconstroem o formulário enquanto você registra ou escreve contexto. Atualizações da PWA pedem que o usuário salve antes de recarregar.
 - Sair da conta oculta o histórico e é bloqueado enquanto há escritas pendentes. O cache não é apagado ao sair; use um aparelho pessoal. Limpar dados do navegador pode apagar registros que ainda não chegaram ao servidor.
 
-## Dados existentes e exportação
+## Contrato V2 e exportação
 
-A chave antiga `entre.entries.v1` continua preservada. Em **Conta → Importar registros anteriores**, o usuário escolhe transferir seus dados locais para a conta conectada. Nenhum envio acontece só por entrar.
-
-Importação JSON adiciona IDs ausentes por transações e preserva documentos existentes, inclusive exclusões. Não substitui o histórico da conta. Uma interrupção pode importar apenas parte do arquivo; repetir é seguro. Há botão para exportar o backup local anterior antes de importar.
+O app consulta somente documentos com `schemaVersion == 2`. Backups V1 devem ser exportados antes da atualização e migrados fora do fluxo ativo; não há adaptação automática. Importação JSON aceita apenas entradas V2 completas, adiciona IDs ausentes por transações e preserva documentos existentes e tombstones.
 
 Exportação JSON preserva a estrutura para nova importação. CSV usa UTF-8, separador `;`, uma linha por objetivo afetado e uma linha com objetivo/impacto vazios para ações sem objetivos. Textos iniciados por caracteres de fórmula são protegidos. Durações repetidas em linhas de objetivos não devem ser somadas como ações distintas.
 
