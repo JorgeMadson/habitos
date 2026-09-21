@@ -1,5 +1,5 @@
 import {onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut} from 'firebase/auth';
-import {collection, doc, onSnapshot, setDoc, updateDoc, runTransaction} from 'firebase/firestore';
+import {collection, doc, onSnapshot, setDoc, updateDoc, runTransaction, query, where} from 'firebase/firestore';
 import {auth, db} from '../firebase.js';
 import {validateEntries} from './model.js';
 
@@ -31,9 +31,12 @@ function readFailed(uid) {
   try { const value = JSON.parse(localStorage.getItem(recoveryKey(uid)) || '[]'); return Array.isArray(value) ? value : []; }
   catch { return []; }
 }
-function keepFailed(uid, entry, kind) {
-  const items = readFailed(uid).filter(item => item.entry.id !== entry.id);
-  items.push({entry, kind});
+function keepFailed(uid, entry, kind, changedFields=[]) {
+  const current = readFailed(uid);
+  const previous = current.find(item => item.entry.id === entry.id);
+  const items = current.filter(item => item.entry.id !== entry.id);
+  // A rejected create must remain a create even if later local enrichment also fails.
+  items.push({entry, kind: previous?.kind === 'create' ? 'create' : kind, changedFields});
   try { localStorage.setItem(recoveryKey(uid), JSON.stringify(items)); }
   catch { if (state.user?.uid === uid) state.error += ' Exporte um backup agora: não foi possível guardar a cópia de recuperação.'; }
   if (state.user?.uid === uid) state.failed = items;
@@ -56,7 +59,8 @@ onAuthStateChanged(auth, user => {
 
 function watchEntries(uid) {
   unsubscribe?.();
-  unsubscribe = onSnapshot(collection(db, 'users', uid, 'entries'), {includeMetadataChanges: true}, snapshot => {
+  const radarEntries = query(collection(db, 'users', uid, 'entries'), where('schemaVersion', '==', 2));
+  unsubscribe = onSnapshot(radarEntries, {includeMetadataChanges: true}, snapshot => {
     if (state.user?.uid !== uid) return;
     try {
       const records = snapshot.docs.filter(d => !d.data().deleted).map(d => {
@@ -86,13 +90,14 @@ export async function logout() {
 
 // Resolve on the local Firestore snapshot, not on the server promise (which waits offline).
 // The SDK owns the durable queue and retries. Rejected writes get a separate recovery copy.
-export function saveEntry(entry, kind = 'create') {
+export function saveEntry(entry, kind = 'create', changedFields = []) {
   validateEntries([entry]);
   if (!state.user || state.loading) return Promise.reject(new Error('Entre na sua conta e aguarde o carregamento.'));
   const uid = state.user.uid;
   const ref = doc(db, 'users', uid, 'entries', entry.id);
-  const data = kind === 'delete' ? {deleted: true} : kind === 'context'
-    ? {minutes: entry.minutes, note: entry.note, relation: entry.relation}
+  const radarFields = ['energy','emotion','context','alone','nextActionDefined','avoidedTask','cycleLevel','trigger','intervention','interventionResult','apathyScore','fatigueScore','sadnessScore','anxietyScore','guiltScore','focusDifficultyScore','recoveryMinutes','aftermathRecorded'];
+  const data = kind === 'delete' ? {deleted: true} : kind === 'radar'
+    ? Object.fromEntries((changedFields.length ? changedFields : radarFields).map(key => [key, entry[key]]))
     : {...entry, deleted: false};
   operations++;
   state.pending = true;
@@ -118,7 +123,7 @@ export function saveEntry(entry, kind = 'create') {
       finish();
     }).catch(error => {
       if (state.user?.uid === uid) {operations = Math.max(0, operations-1); state.pending = snapshotPending || operations > 0; state.error = errorMessage(error);}
-      keepFailed(uid, entry, kind);
+      keepFailed(uid, entry, kind, changedFields);
       if (state.user?.uid === uid) emit();
       finish(error);
     });
@@ -128,16 +133,14 @@ export async function retryFailed() {
   state.error = '';
   if (state.user) watchEntries(state.user.uid);
   emit();
-  for (const {entry, kind} of [...state.failed]) await saveEntry(entry, kind);
+  for (const {entry, kind, changedFields} of [...state.failed]) await saveEntry(entry, kind, changedFields);
 }
 export function exportEntries() {
   const combined = new Map(state.entries.map(e => [e.id, e]));
   for (const {entry, kind} of state.failed) if (kind !== 'delete') combined.set(entry.id, entry);
   return [...combined.values()];
 }
-export const legacyRaw = () => localStorage.getItem('entre.entries.v1');
-export function legacyEntries() { return validateEntries(JSON.parse(legacyRaw() || '[]')); }
-// Online transaction keeps imports idempotent across devices and never resurrects tombstones.
+// Online transaction keeps V2 imports idempotent across devices and never resurrects tombstones.
 export async function importEntries(records) {
   validateEntries(records);
   if (!state.user) throw new Error('Entre antes de importar.');

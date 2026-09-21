@@ -1,5 +1,5 @@
 import {entriesToCsv} from './model.js';
-import {state, login, register, resetPassword, logout, legacyRaw, legacyEntries, importEntries, retryFailed, errorMessage, exportEntries} from './store.js';
+import {state, login, register, resetPassword, logout, retryFailed, errorMessage, exportEntries} from './store.js';
 export const escapeHtml = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function download(content, filename, type='application/json') {
   const url = URL.createObjectURL(new Blob([content], {type}));
@@ -17,7 +17,6 @@ export function syncText() {
   return 'Sincronizado com sua conta';
 }
 export function accountView() {
-  const legacy = legacyRaw();
   return `<section class="account panel"><h1>${state.user?'Sua conta.':'Seu espaço, com você.'}</h1>${state.user?`
     <p>Conectado como <strong>${escapeHtml(state.user.email)}</strong>.</p><p>Os registros ficam disponíveis neste aparelho e sincronizam quando a conexão volta.</p>
     <button id="account-csv" class="choice">Exportar CSV</button><button id="sign-out" class="choice">Sair da conta</button>
@@ -27,8 +26,6 @@ export function accountView() {
     <label>Senha<div class="password-field"><input name="password" type="password" autocomplete="current-password" minlength="6" required><button id="toggle-password" type="button" aria-label="Mostrar senha" aria-pressed="false">Mostrar</button></div></label>
     <div class="account-actions"><button name="intent" value="login" class="primary">Entrar</button><button name="intent" value="register" class="choice">Criar conta</button></div>
     <button id="reset-password" type="button" class="text-button">Esqueci minha senha</button></form>`}
-    ${legacy?`<div class="legacy"><h2>Registros anteriores neste aparelho</h2><p>Eles continuam preservados. ${state.user?'Importe para esta conta sem substituir o histórico já sincronizado.':'Entre para importá-los para sua conta.'}</p>
-    <button id="export-legacy" class="text-button">Exportar backup anterior</button>${state.user?'<button id="import-legacy" class="choice">Importar registros anteriores</button>':''}</div>`:''}
     <p id="account-message" role="status"></p><p class="muted">Use um aparelho pessoal. Sair da conta oculta o histórico, mas não apaga o cache local do navegador.</p></section>`;
 }
 export function bindAccount() {
@@ -45,10 +42,4 @@ export function bindAccount() {
   if($('#account-csv'))$('#account-csv').onclick=()=>download(entriesToCsv(exportEntries()),'entre-registros.csv','text/csv;charset=utf-8');
   if($('#sign-out'))$('#sign-out').onclick=e=>run(e.currentTarget,logout);
   if($('#retry-failed'))$('#retry-failed').onclick=e=>run(e.currentTarget,retryFailed,'Tentativa de envio iniciada. Confira o estado da sincronização.');
-  if($('#export-legacy'))$('#export-legacy').onclick=()=>download(legacyRaw(),'entre-backup-anterior.json');
-  if($('#import-legacy'))$('#import-legacy').onclick=e=>run(e.currentTarget,async()=>{
-    const records=legacyEntries();
-    if(!confirm(`Importar ${records.length} registros anteriores para ${state.user.email}? Os IDs existentes serão preservados.`))return;
-    const count=await importEntries(records);message(`${count} registros importados. A cópia anterior continua preservada.`);
-  });
 }

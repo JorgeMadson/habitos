@@ -3,8 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function owner(uid) { return request.auth != null && request.auth.uid == uid; }
     function impact(i) {
-      return i is map && i.keys().hasOnly(['goal','value'])
-        && i.goal in ['dieta','fit','chines','concurso','carreira','renda','esposa','saas','dinheiro','tcg','musica']
+      return i.goal in ['dieta','fit','chines','concurso','carreira','renda','esposa','saas','dinheiro','tcg','musica']
         && i.value in ['positive','negative','neutral'];
     }
     function validEntry(id) {
@@ -15,13 +14,13 @@ service cloud.firestore {
         n > 3 ? e.impacts[3].goal : '3', n > 4 ? e.impacts[4].goal : '4',
         n > 5 ? e.impacts[5].goal : '5', n > 6 ? e.impacts[6].goal : '6',
         n > 7 ? e.impacts[7].goal : '7', n > 8 ? e.impacts[8].goal : '8',
-        n > 9 ? e.impacts[9].goal : '9', n > 10 ? e.impacts[10].goal : '10'];
+        n > 9 ? e.impacts[9].goal : '9', n > 10 ? e.impacts[10].goal : '10']
         : [];
-      return e.keys().hasOnly(['id','action','at','impacts','minutes','note','relation','previousId','deleted'])
-        && e.id == id && id.matches('^[A-Za-z0-9_-]{1,128}$')
+      return e.keys().hasOnly(['schemaVersion','id','action','at','impacts','minutes','note','relation','previousId','category','energy','emotion','context','alone','nextActionDefined','avoidedTask','cycleLevel','trigger','intervention','interventionResult','apathyScore','fatigueScore','sadnessScore','anxietyScore','guiltScore','focusDifficultyScore','recoveryMinutes','aftermathRecorded','deleted'])
+        && e.schemaVersion == 2 && e.id == id && id.matches('^[A-Za-z0-9_-]{1,128}$')
         && e.action is string && e.action.size() > 0 && e.action.size() <= 100
         && e.at is string && e.at.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{3}Z$')
-        && e.impacts is list && n >= 0 && n <= 11 && goalIds.toSet().size() == n
+        && e.impacts is list && n >= 0 && n <= 11 && (n == 0 || goalIds.toSet().size() == 11)
         && (n == 0 || impact(e.impacts[0])) && (n < 2 || impact(e.impacts[1]))
         && (n < 3 || impact(e.impacts[2])) && (n < 4 || impact(e.impacts[3]))
         && (n < 5 || impact(e.impacts[4])) && (n < 6 || impact(e.impacts[5]))
@@ -32,14 +31,34 @@ service cloud.firestore {
         && e.note is string && e.note.size() <= 2000
         && e.relation in ['yes','no','unsure']
         && (e.previousId == null || (e.previousId is string && e.previousId.matches('^[A-Za-z0-9_-]{1,128}$')))
+        && e.category in ['routine','work','study','care','leisure','avoidance','sexual','browsing','social','other']
+        && (e.energy == null || e.energy in ['very_low','low','normal','high'])
+        && (e.emotion == null || e.emotion in ['neutral','bored','anxious','sad','frustrated','irritated','lonely','overwhelmed','aroused','unknown'])
+        && (e.context == null || e.context in ['alone','family','work','home','bed','bathroom','transport','other'])
+        && (e.alone == null || e.alone is bool)
+        && (e.nextActionDefined == null || e.nextActionDefined is bool)
+        && (e.avoidedTask == null || e.avoidedTask in ['work','study','housework','appointment','conversation','sleep','none','unknown'])
+        && (e.cycleLevel == null || (e.cycleLevel is int && e.cycleLevel >= 0 && e.cycleLevel <= 4))
+        && (e.trigger == null || e.trigger in ['alone','directionless','task_ended','procrastination','boredom','anxiety','sadness','frustration','sexual_arousal','phone','browsing','sexual_content','escorts','other'])
+        && (e.intervention == null || (e.intervention is string && e.intervention.size() <= 100))
+        && (e.interventionResult == null || e.interventionResult in ['decreased','same','increased','continued'])
+        && (e.apathyScore == null || (e.apathyScore is int && e.apathyScore >= 0 && e.apathyScore <= 5))
+        && (e.fatigueScore == null || (e.fatigueScore is int && e.fatigueScore >= 0 && e.fatigueScore <= 5))
+        && (e.sadnessScore == null || (e.sadnessScore is int && e.sadnessScore >= 0 && e.sadnessScore <= 5))
+        && (e.anxietyScore == null || (e.anxietyScore is int && e.anxietyScore >= 0 && e.anxietyScore <= 5))
+        && (e.guiltScore == null || (e.guiltScore is int && e.guiltScore >= 0 && e.guiltScore <= 5))
+        && (e.focusDifficultyScore == null || (e.focusDifficultyScore is int && e.focusDifficultyScore >= 0 && e.focusDifficultyScore <= 5))
+        && (e.recoveryMinutes == null || (e.recoveryMinutes is int && e.recoveryMinutes >= 0 && e.recoveryMinutes <= 10080))
+        && e.aftermathRecorded is bool
         && e.deleted is bool;
     }
     match /users/{uid}/entries/{id} {
       allow read: if owner(uid);
       allow create: if owner(uid) && validEntry(id) && request.resource.data.deleted == false;
-      // Keep tombstones: an old backup or offline context edit must not resurrect deleted actions.
+      // Keep tombstones: delayed offline updates and imports cannot resurrect actions.
       allow update: if owner(uid) && validEntry(id)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['minutes','note','relation','deleted'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['energy','emotion','context','alone','nextActionDefined','avoidedTask','cycleLevel','trigger','intervention','interventionResult','apathyScore','fatigueScore','sadnessScore','anxietyScore','guiltScore','focusDifficultyScore','recoveryMinutes','aftermathRecorded','deleted'])
+        && (resource.data.deleted == false || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted']))
         && (resource.data.deleted == false || request.resource.data.deleted == true);
       allow delete: if false;
     }

@@ -5,7 +5,8 @@ import {doc, setDoc, getDoc, updateDoc, deleteDoc} from 'firebase/firestore';
 import {goals} from '../src/model.js';
 const env=await initializeTestEnvironment({projectId:'demo-entre',firestore:{host:'127.0.0.1',port:8080,rules:await readFile('firestore.rules','utf8')}});
 await env.clearFirestore();
-const record={id:'rules-record',at:new Date().toISOString(),action:'Estudei',impacts:[{goal:'concurso',value:'positive'}],minutes:0,note:'',relation:'unsure',previousId:null,deleted:false};
+const radar={category:'study',energy:null,emotion:null,context:null,alone:null,nextActionDefined:null,avoidedTask:null,cycleLevel:0,trigger:null,intervention:null,interventionResult:null,apathyScore:null,fatigueScore:null,sadnessScore:null,anxietyScore:null,guiltScore:null,focusDifficultyScore:null,recoveryMinutes:null,aftermathRecorded:false};
+const record={schemaVersion:2,id:'rules-record',at:new Date().toISOString(),action:'Estudei',impacts:[{goal:'concurso',value:'positive'}],minutes:0,note:'',relation:'unsure',previousId:null,deleted:false,...radar};
 const own=doc(env.authenticatedContext('rules-owner').firestore(),'users/rules-owner/entries/rules-record');
 test('rules isolate accounts, validate data, preserve deleted records and immutable action identity',async()=>{
  await assertSucceeds(setDoc(own,record));
@@ -18,9 +19,9 @@ test('rules isolate accounts, validate data, preserve deleted records and immuta
  await assertFails(setDoc(doc(env.authenticatedContext('rules-owner').firestore(),'users/rules-owner/entries/invalid'),{...record,id:'invalid',impacts:[{goal:'concurso',value:'positive'},{goal:'concurso',value:'negative'}]}));
   await assertSucceeds(setDoc(doc(env.authenticatedContext('rules-owner').firestore(),'users/rules-owner/entries/all-goals'),{...record,id:'all-goals',impacts:goals.map(([goal])=>({goal,value:'neutral'}))}));
   await assertSucceeds(setDoc(doc(env.authenticatedContext('rules-owner').firestore(),'users/rules-owner/entries/no-goal'),{...record,id:'no-goal',action:'Fap / porn',impacts:[]}));
- await assertSucceeds(updateDoc(own,{note:'Revisão',minutes:30}));
+  await assertSucceeds(updateDoc(own,{energy:'normal',emotion:'neutral'}));
  await assertSucceeds(updateDoc(own,{deleted:true}));
- await assertSucceeds(updateDoc(own,{note:'Contexto offline atrasado'}));
+  await assertFails(updateDoc(own,{intervention:'water',interventionResult:'decreased'}));
  await assertFails(updateDoc(own,{deleted:false}));
  await assertFails(deleteDoc(own));
 });
